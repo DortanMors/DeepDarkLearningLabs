@@ -5,7 +5,6 @@ from builtins import object
 import numpy as np
 from scripts.classifiers.linear_svm import *
 from scripts.classifiers.softmax import *
-from past.builtins import xrange
 
 
 class LinearClassifier(object):
