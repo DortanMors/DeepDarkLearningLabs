@@ -6,15 +6,13 @@ import numpy as np
 
 
 def relu(x):
-    return np.max((np.zeros_like(x), x), axis=0)
+    return np.maximum(x, 0.0)
 
 
 def softmax(x):
-    # return np.exp(x) / np.tile(np.exp(x).sum(-1), (x.shape[1], 1)).T
-    max_scores = np.max(x, axis=1, keepdims=True)
-    exp_scores = np.exp(x - max_scores)
-    exp_scores_sum = exp_scores.sum(axis=1, keepdims=True)
-    res_softmax = exp_scores / exp_scores_sum
+    e_scores = np.exp(x)
+    e_scores_sum = e_scores.sum(axis=1).reshape(-1, 1)
+    res_softmax = e_scores / e_scores_sum
     return res_softmax
 
 
@@ -85,7 +83,7 @@ class TwoLayerNet(object):
         W1, b1 = self.params['W1'], self.params['b1']
         W2, b2 = self.params['W2'], self.params['b2']
         N, D = X.shape
-        C = self.num_classes
+
         # Compute the forward pass
         scores = None
         #############################################################################
@@ -95,7 +93,6 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        # Выполнение прямого прохода, вычисление оценок классов для входа
         scores_first_layer = X.dot(W1) + b1
         scores_hidden = relu(scores_first_layer)
         scores = scores_hidden.dot(W2) + b2
@@ -116,10 +113,7 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        max_scores = np.max(scores, axis=1, keepdims=True)
-        exp_scores = np.exp(scores - max_scores)
-        exp_scores_sum = exp_scores.sum(axis=1, keepdims=True)
-        res_softmax = exp_scores / exp_scores_sum
+        res_softmax = softmax(scores)
 
         loss_contributors = res_softmax[range(N), y]
         loss = -np.log(np.maximum(loss_contributors, 1e-10)).sum() / N + reg * np.sum(W1 * W1) + reg * np.sum(W2 * W2)
@@ -166,7 +160,7 @@ class TwoLayerNet(object):
         - verbose: boolean; if true print progress during optimization.
         """
         num_train = X.shape[0]
-        iterations_per_epoch = max(num_train / batch_size, 1)
+        iterations_per_epoch = max(num_train // batch_size, 1)
 
         # Use SGD to optimize the parameters in self.model
         loss_history = []
@@ -201,8 +195,10 @@ class TwoLayerNet(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            self.params['W1'] += grads['W1'] * learning_rate
-            self.params['W2'] += grads['W2'] * learning_rate
+            self.params['W1'] -= learning_rate * grads['W1']
+            self.params['b1'] -= learning_rate * grads['b1']
+            self.params['W2'] -= learning_rate * grads['W2']
+            self.params['b2'] -= learning_rate * grads['b2']
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -248,14 +244,12 @@ class TwoLayerNet(object):
         ###########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        y_pred = np.argmax(
-            softmax(
-                relu(
-                    X.dot(self.params['W1'])
-                ).dot(self.params['W2'])
-            ),
-            axis=-1,
-        )
+        W1, b1 = self.params['W1'], self.params['b1']
+        W2, b2 = self.params['W2'], self.params['b2']
+
+        scores = relu(X.dot(W1) + b1).dot(W2) + b2
+
+        y_pred = np.argmax(scores, axis=1)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
