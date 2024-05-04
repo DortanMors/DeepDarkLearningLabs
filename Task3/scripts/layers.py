@@ -394,12 +394,7 @@ def conv_forward_naive(x, w, b, conv_param):
     - conv_param: A dictionary with the following keys:
       - 'stride': The number of pixels between adjacent receptive fields in the
         horizontal and vertical directions.
-      - 'pad': The number of pixels that will be used to zero-pad the input. 
-        
-
-    During padding, 'pad' zeros should be placed symmetrically (i.e equally on both sides)
-    along the height and width axes of the input. Be careful not to modfiy the original
-    input x directly.
+      - 'pad': The number of pixels that will be used to zero-pad the input.
 
     Returns a tuple of:
     - out: Output data, of shape (N, F, H', W') where H' and W' are given by
@@ -407,19 +402,31 @@ def conv_forward_naive(x, w, b, conv_param):
       W' = 1 + (W + 2 * pad - WW) / stride
     - cache: (x, w, b, conv_param)
     """
-    out = None
-    ###########################################################################
-    # TODO: Implement the convolutional forward pass.                         #
-    # Hint: you can use the function np.pad for padding.                      #
-    ###########################################################################
-    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    pad = conv_param['pad']
+    stride = conv_param['stride']
 
-    pass
+    # Pad the input
+    x_padded = np.pad(x, ((0, 0), (pad, pad), (pad, pad), (pad, pad)), 'constant')
 
-    # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    # Compute the dimensions of the output
+    H_prime = 1 + (x.shape[2] + 2 * pad - w.shape[2]) // stride
+    W_prime = 1 + (x.shape[3] + 2 * pad - w.shape[3]) // stride
+
+    # Iterate over all filters
+    out = np.zeros((x.shape[0], w.shape[0], H_prime, W_prime))
+    for i in range(w.shape[0]):
+        # Compute the output for a single filter
+        out_i = np.zeros((x.shape[0], 1, H_prime, W_prime))
+        for j in range(x.shape[1]):
+            # Compute the dot product between the filter and the input, and update the output
+            out_i += np.sum(x_padded[:, j, :, :] * w[i, j, :, :], axis=(1, 3, 4))
+
+        # Add the bias
+        out_i += b[i]
+
+        # Store the output for this filter
+        out[:, i, :, :] = out_i[:, 0, :, :]
+
     cache = (x, w, b, conv_param)
     return out, cache
 
