@@ -509,28 +509,33 @@ def max_pool_forward_naive(x, pool_param):
 
 
 def max_pool_backward_naive(dout, cache):
-    """
-    A naive implementation of the backward pass for a max-pooling layer.
+    x, pool_param = cache
+    N, C, H, W = x.shape
+    pool_height = pool_param['pool_height']
+    pool_width = pool_param['pool_width']
+    stride = pool_param['stride']
+    H_out = 1 + (H - pool_height) // stride
+    W_out = 1 + (W - pool_width) // stride
 
-    Inputs:
-    - dout: Upstream derivatives
-    - cache: A tuple of (x, pool_param) as in the forward pass.
+    dx = np.zeros_like(x)
 
-    Returns:
-    - dx: Gradient with respect to x
-    """
-    dx = None
-    ###########################################################################
-    # TODO: Implement the max-pooling backward pass                           #
-    ###########################################################################
-    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    for n in range(N):
+        for c in range(C):
+            for h in range(H_out):
+                for w in range(W_out):
+                    h1 = h * stride
+                    h2 = h1 + pool_height
+                    w1 = w * stride
+                    w2 = w1 + pool_width
 
-    pass
+                    # Find the index of the max value in the pooling region
+                    x_pooling_region = x[n, c, h1:h2, w1:w2]
+                    max_value = np.max(x_pooling_region)
+                    mask = x_pooling_region == max_value
 
-    # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+                    # Only the max value has gradient 1, the rest have gradient 0
+                    dx[n, c, h1:h2, w1:w2] += dout[n, c, h, w] * mask
+
     return dx
 
 
