@@ -402,6 +402,13 @@ def conv_forward_naive(x, w, b, conv_param):
       W' = 1 + (W + 2 * pad - WW) / stride
     - cache: (x, w, b, conv_param)
     """
+    out = None
+    ###########################################################################
+    # TODO: Implement the convolutional forward pass.                         #
+    # Hint: you can use the function np.pad for padding.                      #
+    ###########################################################################
+    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+
     out = np.zeros((x.shape[0], w.shape[0],
                     (x.shape[2] + 2 * conv_param['pad'] - w.shape[2]) // conv_param['stride'] + 1,
                     (x.shape[3] + 2 * conv_param['pad'] - w.shape[3]) // conv_param['stride'] + 1))
@@ -436,6 +443,12 @@ def conv_backward_naive(dout, cache):
     - dw: Gradient with respect to weights w, of shape (F, C, HH, WW)
     - db: Gradient with respect to bias b, of shape (F,)
     """
+    dx, dw, db = None, None, None
+    ###########################################################################
+    # TODO: Implement the convolutional backward pass.                        #
+    ###########################################################################
+    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+
     x, w, b, conv_param = cache
     stride, pad = conv_param['stride'], conv_param['pad']
 
@@ -443,54 +456,73 @@ def conv_backward_naive(dout, cache):
     F, _, HH, WW = w.shape
     _, _, H_out, W_out = dout.shape
 
-    # Pad the input
     x_padded = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant')
 
-    # Initialize gradients
     dx = np.zeros_like(x)
     dw = np.zeros_like(w)
     db = np.zeros_like(b)
     dx_padded = np.zeros_like(x_padded)
 
-    # Compute gradients
     for n in range(N):
         for f in range(F):
             for h_out in range(H_out):
                 for w_out in range(W_out):
-                    # Find the corners of the current "slice"
                     h_start = h_out * stride
                     w_start = w_out * stride
                     h_end = h_start + HH
                     w_end = w_start + WW
 
-                    # Update gradients for the window and the filter
                     window = x_padded[n, :, h_start:h_end, w_start:w_end]
                     dw[f] += dout[n, f, h_out, w_out] * window
                     dx_padded[n, :, h_start:h_end, w_start:w_end] += dout[n, f, h_out, w_out] * w[f]
 
-            # Sum over all positions to get the gradient of the bias
             db[f] += np.sum(dout[n, f])
 
-    # "Unpad" dx to get the correct shape (remove padding)
     if pad > 0:
         dx = dx_padded[:, :, pad:-pad, pad:-pad]
     else:
         dx = dx_padded
 
+    # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    ###########################################################################
+    #                             END OF YOUR CODE                            #
+    ###########################################################################
     return dx, dw, db
 
 
 def max_pool_forward_naive(x, pool_param):
+    """
+    A naive implementation of the forward pass for a max-pooling layer.
+
+    Inputs:
+    - x: Input data, of shape (N, C, H, W)
+    - pool_param: dictionary with the following keys:
+      - 'pool_height': The height of each pooling region
+      - 'pool_width': The width of each pooling region
+      - 'stride': The distance between adjacent pooling regions
+
+    No padding is necessary here. Output size is given by
+
+    Returns a tuple of:
+    - out: Output data, of shape (N, C, H', W') where H' and W' are given by
+      H' = 1 + (H - pool_height) / stride
+      W' = 1 + (W - pool_width) / stride
+    - cache: (x, pool_param)
+    """
+    out = None
+    ###########################################################################
+    # TODO: Implement the max-pooling forward pass                            #
+    ###########################################################################
+    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+
     N, C, H, W = x.shape
     pool_height = pool_param['pool_height']
     pool_width = pool_param['pool_width']
     stride = pool_param['stride']
 
-    # Calculate output dimensions after the pooling
     H_out = 1 + (H - pool_height) // stride
     W_out = 1 + (W - pool_width) // stride
 
-    # Initialize output
     out = np.zeros((N, C, H_out, W_out))
 
     for n in range(N):
@@ -505,10 +537,32 @@ def max_pool_forward_naive(x, pool_param):
                     out[n, c, h, w] = np.max(window)
 
     cache = (x, pool_param)
+
+    # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    ###########################################################################
+    #                             END OF YOUR CODE                            #
+    ###########################################################################
+    cache = (x, pool_param)
     return out, cache
 
 
 def max_pool_backward_naive(dout, cache):
+    """
+    A naive implementation of the backward pass for a max-pooling layer.
+
+    Inputs:
+    - dout: Upstream derivatives
+    - cache: A tuple of (x, pool_param) as in the forward pass.
+
+    Returns:
+    - dx: Gradient with respect to x
+    """
+    dx = None
+    ###########################################################################
+    # TODO: Implement the max-pooling backward pass                           #
+    ###########################################################################
+    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+
     x, pool_param = cache
     N, C, H, W = x.shape
     pool_height = pool_param['pool_height']
@@ -536,6 +590,10 @@ def max_pool_backward_naive(dout, cache):
                     # Only the max value has gradient 1, the rest have gradient 0
                     dx[n, c, h1:h2, w1:w2] += dout[n, c, h, w] * mask
 
+    # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    ###########################################################################
+    #                             END OF YOUR CODE                            #
+    ###########################################################################
     return dx
 
 
