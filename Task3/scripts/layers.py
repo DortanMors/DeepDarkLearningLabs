@@ -402,30 +402,22 @@ def conv_forward_naive(x, w, b, conv_param):
       W' = 1 + (W + 2 * pad - WW) / stride
     - cache: (x, w, b, conv_param)
     """
-    pad = conv_param['pad']
-    stride = conv_param['stride']
+    out = np.zeros((x.shape[0], w.shape[0],
+                    (x.shape[2] + 2 * conv_param['pad'] - w.shape[2]) // conv_param['stride'] + 1,
+                    (x.shape[3] + 2 * conv_param['pad'] - w.shape[3]) // conv_param['stride'] + 1))
 
-    # Pad the input
-    x_padded = np.pad(x, ((0, 0), (pad, pad), (pad, pad), (pad, pad)), 'constant')
+    x_padded = np.pad(x, ((0, 0), (0, 0), (conv_param['pad'], conv_param['pad']), (conv_param['pad'], conv_param['pad'])))
 
-    # Compute the dimensions of the output
-    H_prime = 1 + (x.shape[2] + 2 * pad - w.shape[2]) // stride
-    W_prime = 1 + (x.shape[3] + 2 * pad - w.shape[3]) // stride
+    for i in range(x.shape[0]):
+        for f in range(w.shape[0]):
+            for j in range(out.shape[2]):
+                for k in range(out.shape[3]):
+                    out[i, f, j, k] = np.sum(x_padded[i, :, j*conv_param['stride']:j*conv_param['stride']+w.shape[2], k*conv_param['stride']:k*conv_param['stride']+w.shape[3]] * w[f, :, :, :]) + b[f]
 
-    # Iterate over all filters
-    out = np.zeros((x.shape[0], w.shape[0], H_prime, W_prime))
-    for i in range(w.shape[0]):
-        # Compute the output for a single filter
-        out_i = np.zeros((x.shape[0], 1, H_prime, W_prime))
-        for j in range(x.shape[1]):
-            # Compute the dot product between the filter and the input, and update the output
-            out_i += np.sum(x_padded[:, j, :, :] * w[i, j, :, :], axis=(1, 3, 4))
-
-        # Add the bias
-        out_i += b[i]
-
-        # Store the output for this filter
-        out[:, i, :, :] = out_i[:, 0, :, :]
+    # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    ###########################################################################
+    #                             END OF YOUR CODE                            #
+    ###########################################################################
 
     cache = (x, w, b, conv_param)
     return out, cache
@@ -436,26 +428,55 @@ def conv_backward_naive(dout, cache):
     A naive implementation of the backward pass for a convolutional layer.
 
     Inputs:
-    - dout: Upstream derivatives.
+    - dout: Upstream derivatives, of shape (N, F, H', W')
     - cache: A tuple of (x, w, b, conv_param) as in conv_forward_naive
 
     Returns a tuple of:
-    - dx: Gradient with respect to x
-    - dw: Gradient with respect to w
-    - db: Gradient with respect to b
+    - dx: Gradient with respect to input x, of shape (N, C, H, W)
+    - dw: Gradient with respect to weights w, of shape (F, C, HH, WW)
+    - db: Gradient with respect to bias b, of shape (F,)
     """
-    dx, dw, db = None, None, None
-    ###########################################################################
-    # TODO: Implement the convolutional backward pass.                        #
-    ###########################################################################
-    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    x, w, b, conv_param = cache
+    stride, pad = conv_param['stride'], conv_param['pad']
 
-    pass
+    N, C, H, W = x.shape
+    F, _, HH, WW = w.shape
+    _, _, H_out, W_out = dout.shape
 
-    # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    # Pad the input
+    x_padded = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant')
+
+    # Initialize gradients
+    dx = np.zeros_like(x)
+    dw = np.zeros_like(w)
+    db = np.zeros_like(b)
+    dx_padded = np.zeros_like(x_padded)
+
+    # Compute gradients
+    for n in range(N):
+        for f in range(F):
+            for h_out in range(H_out):
+                for w_out in range(W_out):
+                    # Find the corners of the current "slice"
+                    h_start = h_out * stride
+                    w_start = w_out * stride
+                    h_end = h_start + HH
+                    w_end = w_start + WW
+
+                    # Update gradients for the window and the filter
+                    window = x_padded[n, :, h_start:h_end, w_start:w_end]
+                    dw[f] += dout[n, f, h_out, w_out] * window
+                    dx_padded[n, :, h_start:h_end, w_start:w_end] += dout[n, f, h_out, w_out] * w[f]
+
+            # Sum over all positions to get the gradient of the bias
+            db[f] += np.sum(dout[n, f])
+
+    # "Unpad" dx to get the correct shape (remove padding)
+    if pad > 0:
+        dx = dx_padded[:, :, pad:-pad, pad:-pad]
+    else:
+        dx = dx_padded
+
     return dx, dw, db
 
 
