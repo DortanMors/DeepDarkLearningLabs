@@ -481,36 +481,29 @@ def conv_backward_naive(dout, cache):
 
 
 def max_pool_forward_naive(x, pool_param):
-    """
-    A naive implementation of the forward pass for a max-pooling layer.
+    N, C, H, W = x.shape
+    pool_height = pool_param['pool_height']
+    pool_width = pool_param['pool_width']
+    stride = pool_param['stride']
 
-    Inputs:
-    - x: Input data, of shape (N, C, H, W)
-    - pool_param: dictionary with the following keys:
-      - 'pool_height': The height of each pooling region
-      - 'pool_width': The width of each pooling region
-      - 'stride': The distance between adjacent pooling regions
+    # Calculate output dimensions after the pooling
+    H_out = 1 + (H - pool_height) // stride
+    W_out = 1 + (W - pool_width) // stride
 
-    No padding is necessary here. Output size is given by 
+    # Initialize output
+    out = np.zeros((N, C, H_out, W_out))
 
-    Returns a tuple of:
-    - out: Output data, of shape (N, C, H', W') where H' and W' are given by
-      H' = 1 + (H - pool_height) / stride
-      W' = 1 + (W - pool_width) / stride
-    - cache: (x, pool_param)
-    """
-    out = None
-    ###########################################################################
-    # TODO: Implement the max-pooling forward pass                            #
-    ###########################################################################
-    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    for n in range(N):
+        for c in range(C):
+            for h in range(H_out):
+                for w in range(W_out):
+                    h1 = h * stride
+                    h2 = h1 + pool_height
+                    w1 = w * stride
+                    w2 = w1 + pool_width
+                    window = x[n, c, h1:h2, w1:w2]
+                    out[n, c, h, w] = np.max(window)
 
-    pass
-
-    # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
     cache = (x, pool_param)
     return out, cache
 
