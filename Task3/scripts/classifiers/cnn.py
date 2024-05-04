@@ -62,12 +62,24 @@ class ThreeLayerConvNet(object):
         # the start of the loss() function to see how that happens.                #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+
+        # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+
         C, H, W = input_dim
+        # Weight and bias for the convolutional layer
         self.params['W1'] = weight_scale * np.random.randn(num_filters, C, filter_size, filter_size)
-        self.params['W2'] = weight_scale * np.random.randn(int(num_filters * H * W / 4), hidden_dim)
-        self.params['W3'] = weight_scale * np.random.randn(hidden_dim, num_classes)
         self.params['b1'] = np.zeros(num_filters)
+
+        # Dimensions after the pooling layer
+        H_pool = 1 + (H - 2) // 2
+        W_pool = 1 + (W - 2) // 2
+
+        # Weight and bias for the first affine layer
+        self.params['W2'] = weight_scale * np.random.randn(num_filters * H_pool * W_pool, hidden_dim)
         self.params['b2'] = np.zeros(hidden_dim)
+
+        # Weight and bias for the second affine layer
+        self.params['W3'] = weight_scale * np.random.randn(hidden_dim, num_classes)
         self.params['b3'] = np.zeros(num_classes)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
@@ -106,11 +118,18 @@ class ThreeLayerConvNet(object):
         # cs231n/layer_utils.py in your implementation (already imported).         #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        cache = {}
-        scores = X
-        scores, cache['conv_relu_pool'] = conv_relu_pool_forward(scores,W1,b1,conv_param,pool_param)
-        scores, cache['affine_relu'] = affine_relu_forward(scores,W2,b2)
-        scores, cache['affine'] = affine_forward(scores,W3,b3)
+
+        # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+
+        conv_out, conv_cache = conv_relu_pool_forward(X, self.params['W1'], self.params['b1'], conv_param, pool_param)
+        affine_relu_out, affine_relu_cache = affine_relu_forward(conv_out, self.params['W2'], self.params['b2'])
+        scores, affine_cache = affine_forward(affine_relu_out, self.params['W3'], self.params['b3'])
+
+        if y is None:
+            return scores
+
+        loss, dscores = softmax_loss(scores, y)
+        loss += 0.5 * self.reg * (np.sum(self.params['W1'] ** 2) + np.sum(self.params['W2'] ** 2) + np.sum(self.params['W3'] ** 2))
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -133,17 +152,13 @@ class ThreeLayerConvNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        loss, dout = softmax_loss(scores,y)
-        loss += (0.5*self.reg/X.shape[0])*sum(map(np.linalg.norm, self.params.values()))
-        dout, grads['W3'], grads['b3'] = affine_backward(dout, cache['affine'])
-        grads['W3'] += W3*self.reg/X.shape[0]
-        grads['b3'] += b3*self.reg/X.shape[0]
-        dout, grads['W2'], grads['b2'] = affine_relu_backward(dout, cache['affine_relu'])
-        grads['W2'] += W2*self.reg/X.shape[0]
-        grads['b2'] += b2*self.reg/X.shape[0]
-        dout, grads['W1'], grads['b1'] = conv_relu_pool_backward(dout, cache['conv_relu_pool'])
-        grads['W1'] += W1*self.reg/X.shape[0]
-        grads['b1'] += b1*self.reg/X.shape[0]
+        dout, grads['W3'], grads['b3'] = affine_backward(dscores, affine_cache)
+        dout, grads['W2'], grads['b2'] = affine_relu_backward(dout, affine_relu_cache)
+        dx, grads['W1'], grads['b1'] = conv_relu_pool_backward(dout, conv_cache)
+
+        grads['W3'] += self.reg * self.params['W3']
+        grads['W2'] += self.reg * self.params['W2']
+        grads['W1'] += self.reg * self.params['W1']
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
